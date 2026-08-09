@@ -1,0 +1,34 @@
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing & Linting cache
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Git & CI/CD
+.git/
+.gitignore
+.github/
+
+# Environment variables & secrets
+.env
+.env.*
+
+# Documentation & IDE
+*.md
+.vscode/
+.idea/
+
+# Logs
+*.log
