@@ -43,3 +43,14 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Terraform crash logs
+crash.log
+crash.*.log
