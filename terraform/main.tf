@@ -21,19 +21,40 @@ resource "aws_key_pair" "deployer" {
   public_key = file(var.ssh_public_key_path)
 }
 
-# 3. Настраиваем Security Group (сетевой экран)
+# 3. IAM Роль и Профиль для доступа через AWS Systems Manager (SSM)
+resource "aws_iam_role" "ec2_ssm_role" {
+  name = "cloudops-ec2-ssm-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Прикрепляем стандартную политику SSM
+resource "aws_iam_role_policy_attachment" "ec2_ssm_policy" {
+  role       = aws_iam_role.ec2_ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+# Создаем Instance Profile для передачи роли на EC2
+resource "aws_iam_instance_profile" "ec2_ssm_profile" {
+  name = "cloudops-ec2-ssm-profile-${var.environment}"
+  role = aws_iam_role.ec2_ssm_role.name
+}
+
+# 4. Настраиваем Security Group (сетевой экран без 22 порта)
 resource "aws_security_group" "api_sg" {
   name        = "cloudops-api-sg-${var.environment}"
   description = "Security group for CloudOps Platform API"
-
-  # SSH доступ ТОЛЬКО с твоего IP
-  ingress {
-    description = "SSH access from developer IP"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["217.113.30.148/32"]
-  }
 
   # HTTP доступ для всех
   ingress {
@@ -67,12 +88,13 @@ resource "aws_security_group" "api_sg" {
   }
 }
 
-# 4. Создаем виртуальный сервер EC2
+# 5. Создаем виртуальный сервер EC2
 resource "aws_instance" "app_server" {
-  ami                    = data.aws_ami.ubuntu.id
-  instance_type          = var.instance_type
-  key_name               = aws_key_pair.deployer.key_name
+  ami                  = data.aws_ami.ubuntu.id
+  instance_type        = var.instance_type
+  key_name             = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.api_sg.id]
+  iam_instance_profile = aws_iam_instance_profile.ec2_ssm_profile.name
 
   # Настройка основного диска (Root Volume)
   root_block_device {
@@ -103,7 +125,7 @@ resource "aws_instance" "app_server" {
               EOF
 
   tags = {
-    Name        = "cloudops-server-${var.environment}"
+    Name        = "cloudops-api-server-${var.environment}"
     Environment = var.environment
   }
 }
