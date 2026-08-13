@@ -8,11 +8,12 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-cloudops}
+      POSTGRES_DB: ${POSTGRES_DB:-cloudops_db}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # 🎯 Проверяем реальную готовность PostgreSQL принимать подключения
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-cloudops}"]
       interval: 5s
@@ -21,10 +22,11 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: cloudops-redis
+    container_name: cloudops_redis
     restart: always
     ports:
       - "6379:6379"
+    # 🎯 Проверяем отклик Redis на PING
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -41,16 +43,17 @@ services:
       POSTGRES_SERVER: db
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-cloudops}
+      POSTGRES_DB: ${POSTGRES_DB:-cloudops_db}
       POSTGRES_PORT: 5432
       REDIS_HOST: redis
       REDIS_PORT: 6379
       DEBUG: "True"
+    # 🎯 Запускаем API строго после того, как БД и Redis станут healthy
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
 
 volumes:
   postgres_data:
