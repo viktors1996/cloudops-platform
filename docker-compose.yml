@@ -74,5 +74,85 @@ services:
       - api
       - frontend
 
+  # --- MONITORING & LOGGING STACK ---
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: cloudops_prometheus
+    restart: always
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    expose:
+      - "9090"
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: cloudops_loki
+    restart: always
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    expose:
+      - "3100"
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: cloudops_grafana
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+    expose:
+      - "3000"
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    container_name: cloudops_node_exporter
+    restart: always
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - /:/host:ro,rslave
+    expose:
+      - "9100"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cloudops_cadvisor
+    restart: always
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    expose:
+      - "8080"
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: cloudops_promtail
+    restart: always
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - '-config.file=/etc/promtail/config.yml'
+    depends_on:
+      - loki
+
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
