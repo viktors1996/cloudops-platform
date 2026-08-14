@@ -1,16 +1,19 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: cloudops_db
+    container_name: cloudops-db
     restart: always
+
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-cloudops_db}
+      POSTGRES_DB: ${POSTGRES_DB:-cloudops}
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-cloudops_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-cloudops}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -19,6 +22,7 @@ services:
     image: redis:7-alpine
     container_name: cloudops_redis
     restart: always
+
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -29,31 +33,46 @@ services:
     image: ghcr.io/viktors1996/cloudops-platform/api:latest
     container_name: cloudops_api
     restart: always
+
     environment:
       POSTGRES_SERVER: db
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-cloudops_db}
+      POSTGRES_DB: ${POSTGRES_DB:-cloudops}
       POSTGRES_PORT: 5432
+
       REDIS_HOST: redis
       REDIS_PORT: 6379
+
       DEBUG: "True"
+
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cloudops_frontend
+    restart: always
+
   nginx:
     image: nginx:alpine
     container_name: cloudops_nginx
     restart: always
+
     ports:
       - "80:80"
+
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
     depends_on:
       - api
+      - frontend
 
 volumes:
   postgres_data:
