@@ -142,7 +142,7 @@ jobs:
           echo "EC2 instance:"
           echo "$EC2_INSTANCE_ID"
 
-          DEPLOY_COMMAND="sudo -u ubuntu -H bash -lc 'set -euo pipefail; cd /home/ubuntu/cloudops-platform; git pull --ff-only origin main; docker compose pull; docker compose up -d --force-recreate --remove-orphans; docker image prune -f; docker compose ps; for i in 1 2 3 4 5 6 7 8 9 10; do curl -fsS http://localhost/api/v1/health && exit 0; sleep 3; done; exit 1'"
+          DEPLOY_COMMAND="sudo -u ubuntu -H bash -lc 'set -euo pipefail; cd /home/ubuntu/cloudops-platform; git pull --ff-only origin main; docker compose pull; docker compose up -d --force-recreate --remove-orphans; docker image prune -f; docker compose ps; echo Waiting for API readiness...; for i in \$(seq 1 20); do if curl -fsS http://localhost/api/v1/health; then echo; echo API is healthy; exit 0; fi; echo Health check attempt \$i/20 failed - retrying...; sleep 3; done; echo API health check failed after 60 seconds; docker compose ps; docker compose logs --tail=50 api nginx; exit 1'"
 
           PARAMS=$(jq -n \
             --arg command "$DEPLOY_COMMAND" \
