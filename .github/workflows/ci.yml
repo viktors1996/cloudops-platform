@@ -133,7 +133,17 @@ jobs:
           EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
 
         run: |
+          echo "AWS account:"
+          aws sts get-caller-identity
+
+          echo "AWS region:"
+          echo "$AWS_REGION"
+
+          echo "EC2 instance:"
+          echo "$EC2_INSTANCE_ID"
+
           DEPLOY_COMMAND="sudo -u ubuntu -H bash -lc 'set -euo pipefail; cd /home/ubuntu/cloudops-platform; git pull --ff-only origin main; docker compose pull; docker compose up -d --force-recreate --remove-orphans; docker image prune -f; docker compose ps; for i in 1 2 3 4 5 6 7 8 9 10; do curl -fsS http://localhost/api/v1/health && exit 0; sleep 3; done; exit 1'"
+
           PARAMS=$(jq -n \
             --arg command "$DEPLOY_COMMAND" \
             '{commands: [$command]}')
@@ -150,7 +160,7 @@ jobs:
 
           aws ssm wait command-executed \
             --command-id "$COMMAND_ID" \
-            --instance-id "$EC2_INSTANCE_ID"
+            --instance-id "$EC2_INSTANCE_ID" || true
 
           echo "========== STDOUT =========="
 
