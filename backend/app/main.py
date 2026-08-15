@@ -1,11 +1,24 @@
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from prometheus_client import make_asgi_app
+from fastapi import FastAPI, Request
+from prometheus_client import Counter, Histogram, make_asgi_app
 
 from app.core.config import settings
 from app.database import Base, engine
 from app.routes import health, tasks
+
+HTTP_REQUESTS_TOTAL = Counter(
+    "http_requests_total",
+    "Total number of HTTP requests",
+    ["method", "path", "status_code"],
+)
+
+HTTP_REQUEST_DURATION_SECONDS = Histogram(
+    "http_request_duration_seconds",
+    "HTTP request duration in seconds",
+    ["method", "path"],
+)
 
 
 @asynccontextmanager
@@ -24,6 +37,35 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan,
 )
+
+
+@app.middleware("http")
+async def prometheus_metrics(request: Request, call_next):
+    if request.url.path.startswith("/metrics"):
+        return await call_next(request)
+
+    start_time = time.perf_counter()
+    status_code = 500
+
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+
+    finally:
+        duration = time.perf_counter() - start_time
+
+        HTTP_REQUESTS_TOTAL.labels(
+            method=request.method,
+            path=request.url.path,
+            status_code=str(status_code),
+        ).inc()
+
+        HTTP_REQUEST_DURATION_SECONDS.labels(
+            method=request.method,
+            path=request.url.path,
+        ).observe(duration)
+
 
 app.include_router(
     health.router,
