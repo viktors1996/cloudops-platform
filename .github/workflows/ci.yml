@@ -115,8 +115,8 @@ jobs:
   # DEPLOY
   # =========================
   deploy:
-  - name: Debug GitHub OIDC claims
-    uses: github/actions-oidc-debugger@main
+    runs-on: ubuntu-latest
+    needs: build-and-push
 
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
@@ -124,8 +124,24 @@ jobs:
       id-token: write
       contents: read
 
-
     steps:
+      - name: Show GitHub OIDC claims
+        shell: bash
+        run: |
+          TOKEN_JSON=$(curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")
+
+          TOKEN=$(echo "$TOKEN_JSON" | jq -r '.value')
+
+          PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2 | tr '_-' '/+')
+          case $((${#PAYLOAD} % 4)) in
+            2) PAYLOAD="${PAYLOAD}==" ;;
+            3) PAYLOAD="${PAYLOAD}=" ;;
+          esac
+
+          echo "$PAYLOAD" | base64 -d | jq '{sub, aud, ref, repository, environment}'
+
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v6
         with:
