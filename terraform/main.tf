@@ -90,11 +90,11 @@ resource "aws_security_group" "api_sg" {
 
 # 5. Создаем виртуальный сервер EC2
 resource "aws_instance" "app_server" {
-  ami                  = data.aws_ami.ubuntu.id
-  instance_type        = var.instance_type
-  key_name             = aws_key_pair.deployer.key_name
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = var.instance_type
+  key_name               = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.api_sg.id]
-  iam_instance_profile = aws_iam_instance_profile.ec2_ssm_profile.name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_ssm_profile.name
 
   # Настройка основного диска (Root Volume)
   root_block_device {
@@ -128,4 +128,20 @@ resource "aws_instance" "app_server" {
     Name        = "cloudops-api-server-${var.environment}"
     Environment = var.environment
   }
+}
+
+# 6. Elastic IP для production-сервера
+resource "aws_eip" "app_server" {
+  domain = "vpc"
+
+  tags = {
+    Name        = "cloudops-production-eip"
+    Environment = var.environment
+  }
+}
+
+# Привязываем Elastic IP к EC2
+resource "aws_eip_association" "app_server" {
+  instance_id   = aws_instance.app_server.id
+  allocation_id = aws_eip.app_server.id
 }
