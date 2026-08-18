@@ -54,7 +54,7 @@ export default function Overview() {
   const [logs, setLogs] = useState<LogEntry[]>([
     { id: '1', timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }), type: 'INFO', message: 'CloudOps dashboard initialized. Checking API connectivity...' },
   ]);
-  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const terminalRef = useRef<HTMLDivElement>(null);
 
   const addLog = (type: LogEntry['type'], message: string) => {
     if (isLogPaused) return;
@@ -69,8 +69,8 @@ export default function Overview() {
   };
 
   useEffect(() => {
-    if (terminalEndRef.current && !isLogPaused) {
-      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (terminalRef.current && !isLogPaused) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
   }, [logs, isLogPaused]);
 
@@ -105,10 +105,12 @@ export default function Overview() {
 
       if (Array.isArray(response.data)) {
         setTasks(response.data);
-        if (systemStatus !== 'online') {
-          setSystemStatus('online');
-          addLog('SUCCESS', `API Online. Latency: ${currentLatency}ms`);
-        }
+        setSystemStatus((prevStatus) => {
+          if (prevStatus !== 'online') {
+            addLog('SUCCESS', `API Online. Latency: ${currentLatency}ms`);
+          }
+          return 'online';
+        });
       } else {
         setTasks([]);
         setSystemStatus('offline');
@@ -865,7 +867,10 @@ export default function Overview() {
                 </div>
               </div>
 
-              <div className="p-3.5 font-mono text-[11px] h-48 overflow-y-auto space-y-1.5">
+              <div
+                ref={terminalRef}
+                className="p-3.5 font-mono text-[11px] h-48 overflow-y-auto space-y-1.5"
+              >
                 <AnimatePresence initial={false}>
                 {logs.map((log) => (
                   <motion.div
@@ -898,7 +903,6 @@ export default function Overview() {
                 <div className="text-emerald-400 animate-pulse font-mono flex items-center gap-1">
                   <span>&gt;_</span>
                 </div>
-                <div ref={terminalEndRef} />
               </div>
             </div>
 
