@@ -7,13 +7,20 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+
   resolve: {
     dedupe: ['react', 'react-dom'],
   },
+
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8000', // Адрес локального FastAPI бэкенда
+        target: 'http://localhost:80',
+        changeOrigin: true,
+      },
+
+      '/grafana': {
+        target: 'http://localhost:80',
         changeOrigin: true,
       },
     },
