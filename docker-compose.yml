@@ -44,7 +44,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
 
-      DEBUG: "True"
+      DEBUG: "False"
 
     depends_on:
       db:
@@ -104,7 +104,7 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
-      - GF_SERVER_ROOT_URL=http://18.194.102.25/grafana/
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:?GRAFANA_ROOT_URL is required}
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
     volumes:
       - grafana_data:/var/lib/grafana

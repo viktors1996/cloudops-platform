@@ -53,4 +53,5 @@ Thumbs.db
 
 # Terraform crash logs
 crash.log
-crash.*.lognode_modules/
+crash.*.log
+node_modules/
