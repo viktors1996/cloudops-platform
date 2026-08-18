@@ -53,9 +53,7 @@ services:
         condition: service_healthy
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ghcr.io/viktors1996/cloudops-platform/frontend:latest
     container_name: cloudops_frontend
     restart: always
 
